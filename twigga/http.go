@@ -74,6 +74,42 @@ func (c *Client) QueryDocuments(ctx context.Context, database, collection string
 	return docs, nil
 }
 
+func (c *Client) CollectionExists(ctx context.Context, database, collection string) (bool, error) {
+	url := fmt.Sprintf("%s/collection/%s/%s/exists", c.BaseURL, database, collection)
+
+	body, err := c.doRequest(ctx, http.MethodGet, url, nil)
+	if err != nil {
+		return false, err
+	}
+
+	var result struct {
+		Exists bool `json:"exists"`
+	}
+	if err := json.Unmarshal(body, &result); err != nil {
+		return false, err
+	}
+
+	return result.Exists, nil
+}
+
+func (c *Client) DocumentExists(ctx context.Context, database, collection string, filter map[string]any) (bool, error) {
+	url := fmt.Sprintf("%s/document/%s/%s/exists", c.BaseURL, database, collection)
+
+	body, err := c.doRequest(ctx, http.MethodPost, url, filter)
+	if err != nil {
+		return false, err
+	}
+
+	var result struct {
+		Exists bool `json:"exists"`
+	}
+	if err := json.Unmarshal(body, &result); err != nil {
+		return false, err
+	}
+
+	return result.Exists, nil
+}
+
 // GetCollection fetches all documents from a table
 func (c *Client) GetCollection(ctx context.Context, db, table string) ([]byte, error) {
 	url := fmt.Sprintf("%s/document/%s/%s", c.BaseURL, db, table)
