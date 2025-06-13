@@ -1,7 +1,7 @@
 package main
 
 func main() {
-	// twiggaClient := twigga.NewTwiggaClient("", "")
+	// twiggaClient := twigga.NewTwiggaClient("", "Authentication")
 
 	// dataToFilter := map[string]any{
 	// 	"email": "adamreuben66@gmail.com",

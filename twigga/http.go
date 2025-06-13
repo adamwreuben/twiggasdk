@@ -58,7 +58,7 @@ func (c *Client) GetDocument(ctx context.Context, collection, id string) ([]byte
 }
 
 // return list of filetered documents
-func (c *Client) QueryDocuments(ctx context.Context, collection string, filter map[string]any) ([]interface{}, error) {
+func (c *Client) QueryDocuments(ctx context.Context, collection string, filter map[string]any) (map[string]interface{}, error) {
 	url := fmt.Sprintf("%s/document/%s/%s/filter", c.BaseURL, c.DefaultUserDatabase, collection)
 
 	body, err := c.doRequest(ctx, http.MethodPost, url, filter)
@@ -66,14 +66,12 @@ func (c *Client) QueryDocuments(ctx context.Context, collection string, filter m
 		return nil, err
 	}
 
-	var doc map[string]any
+	var doc map[string]interface{}
 	if err := json.Unmarshal(body, &doc); err != nil {
 		return nil, err
 	}
 
-	listOfDocuments := doc["documents"].([]interface{}) // fix for now
-
-	return listOfDocuments, nil
+	return doc, nil
 }
 
 func (c *Client) CollectionExists(ctx context.Context, collection string) (bool, error) {
