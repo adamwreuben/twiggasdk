@@ -40,42 +40,44 @@ func (c *Client) doRequest(ctx context.Context, method, url string, body any) ([
 }
 
 // CreateDocumentAuto creates a new document with auto-generated ID
-func (c *Client) CreateDocumentAuto(ctx context.Context, db, table string, doc any) ([]byte, error) {
-	url := fmt.Sprintf("%s/document/%s/%s", c.BaseURL, db, table)
+func (c *Client) CreateDocumentAuto(ctx context.Context, collection string, doc any) ([]byte, error) {
+	url := fmt.Sprintf("%s/document/%s/%s", c.BaseURL, c.DefaultUserDatabase, collection)
 	return c.doRequest(ctx, http.MethodPost, url, doc)
 }
 
 // CreateDocumentWithID creates a document with a specified ID
-func (c *Client) CreateDocumentWithID(ctx context.Context, db, table, id string, doc any) ([]byte, error) {
-	url := fmt.Sprintf("%s/document/%s/%s/%s", c.BaseURL, db, table, id)
+func (c *Client) CreateDocumentWithID(ctx context.Context, collection, id string, doc any) ([]byte, error) {
+	url := fmt.Sprintf("%s/document/%s/%s/%s", c.BaseURL, c.DefaultUserDatabase, collection, id)
 	return c.doRequest(ctx, http.MethodPost, url, doc)
 }
 
 // GetDocument fetches a document by ID
-func (c *Client) GetDocument(ctx context.Context, db, table, id string) ([]byte, error) {
-	url := fmt.Sprintf("%s/document/%s/%s/%s", c.BaseURL, db, table, id)
+func (c *Client) GetDocument(ctx context.Context, collection, id string) ([]byte, error) {
+	url := fmt.Sprintf("%s/document/%s/%s/%s", c.BaseURL, c.DefaultUserDatabase, collection, id)
 	return c.doRequest(ctx, http.MethodGet, url, nil)
 }
 
 // return list of filetered documents
-func (c *Client) QueryDocuments(ctx context.Context, database, collection string, filter map[string]any) ([]map[string]any, error) {
-	url := fmt.Sprintf("%s/document/%s/%s/filter", c.BaseURL, database, collection)
+func (c *Client) QueryDocuments(ctx context.Context, collection string, filter map[string]any) ([]map[string]any, error) {
+	url := fmt.Sprintf("%s/document/%s/%s/filter", c.BaseURL, c.DefaultUserDatabase, collection)
 
 	body, err := c.doRequest(ctx, http.MethodPost, url, filter)
 	if err != nil {
 		return nil, err
 	}
 
-	var docs []map[string]any
-	if err := json.Unmarshal(body, &docs); err != nil {
+	var doc map[string]any
+	if err := json.Unmarshal(body, &doc); err != nil {
 		return nil, err
 	}
 
-	return docs, nil
+	listOfDocuments := doc["documents"].([]map[string]any) // fix
+
+	return listOfDocuments, nil
 }
 
-func (c *Client) CollectionExists(ctx context.Context, database, collection string) (bool, error) {
-	url := fmt.Sprintf("%s/collection/%s/%s/exists", c.BaseURL, database, collection)
+func (c *Client) CollectionExists(ctx context.Context, collection string) (bool, error) {
+	url := fmt.Sprintf("%s/collection/%s/%s/exists", c.BaseURL, c.DefaultUserDatabase, collection)
 
 	body, err := c.doRequest(ctx, http.MethodGet, url, nil)
 	if err != nil {
@@ -92,8 +94,8 @@ func (c *Client) CollectionExists(ctx context.Context, database, collection stri
 	return result.Exists, nil
 }
 
-func (c *Client) DocumentExists(ctx context.Context, database, collection string, filter map[string]any) (bool, error) {
-	url := fmt.Sprintf("%s/document/%s/%s/exists", c.BaseURL, database, collection)
+func (c *Client) DocumentExists(ctx context.Context, collection string, filter map[string]any) (bool, error) {
+	url := fmt.Sprintf("%s/document/%s/%s/exists", c.BaseURL, c.DefaultUserDatabase, collection)
 
 	body, err := c.doRequest(ctx, http.MethodPost, url, filter)
 	if err != nil {
@@ -111,43 +113,43 @@ func (c *Client) DocumentExists(ctx context.Context, database, collection string
 }
 
 // GetCollection fetches all documents from a table
-func (c *Client) GetCollection(ctx context.Context, db, table string) ([]byte, error) {
-	url := fmt.Sprintf("%s/document/%s/%s", c.BaseURL, db, table)
+func (c *Client) GetCollection(ctx context.Context, collection string) ([]byte, error) {
+	url := fmt.Sprintf("%s/document/%s/%s", c.BaseURL, c.DefaultUserDatabase, collection)
 	return c.doRequest(ctx, http.MethodGet, url, nil)
 }
 
 // UpdateDocument updates a document by ID
-func (c *Client) UpdateDocument(ctx context.Context, db, table, id string, doc any) ([]byte, error) {
-	url := fmt.Sprintf("%s/document/%s/%s/%s", c.BaseURL, db, table, id)
+func (c *Client) UpdateDocument(ctx context.Context, collection, id string, doc any) ([]byte, error) {
+	url := fmt.Sprintf("%s/document/%s/%s/%s", c.BaseURL, c.DefaultUserDatabase, collection, id)
 	return c.doRequest(ctx, http.MethodPut, url, doc)
 }
 
 // DeleteDocument deletes a document by ID
-func (c *Client) DeleteDocument(ctx context.Context, db, table, id string) ([]byte, error) {
-	url := fmt.Sprintf("%s/document/%s/%s/%s", c.BaseURL, db, table, id)
+func (c *Client) DeleteDocument(ctx context.Context, collection, id string) ([]byte, error) {
+	url := fmt.Sprintf("%s/document/%s/%s/%s", c.BaseURL, c.DefaultUserDatabase, collection, id)
 	return c.doRequest(ctx, http.MethodDelete, url, nil)
 }
 
 // CreateDatabase creates a new database
-func (c *Client) CreateDatabase(ctx context.Context, db string) ([]byte, error) {
-	url := fmt.Sprintf("%s/database/%s", c.BaseURL, db)
+func (c *Client) CreateDatabase(ctx context.Context) ([]byte, error) {
+	url := fmt.Sprintf("%s/database/%s", c.BaseURL, c.DefaultUserDatabase)
 	return c.doRequest(ctx, http.MethodPost, url, nil)
 }
 
 // DeleteDatabase deletes a database
-func (c *Client) DeleteDatabase(ctx context.Context, db string) ([]byte, error) {
-	url := fmt.Sprintf("%s/database/%s", c.BaseURL, db)
+func (c *Client) DeleteDatabase(ctx context.Context) ([]byte, error) {
+	url := fmt.Sprintf("%s/database/%s", c.BaseURL, c.DefaultUserDatabase)
 	return c.doRequest(ctx, http.MethodDelete, url, nil)
 }
 
 // ListAllCollections lists collections in a database
-func (c *Client) ListAllCollections(ctx context.Context, db string) ([]byte, error) {
-	url := fmt.Sprintf("%s/database/%s", c.BaseURL, db)
+func (c *Client) ListAllCollections(ctx context.Context) ([]byte, error) {
+	url := fmt.Sprintf("%s/database/%s", c.BaseURL, c.DefaultUserDatabase)
 	return c.doRequest(ctx, http.MethodGet, url, nil)
 }
 
 // DeleteCollection deletes a collection in a database
-func (c *Client) DeleteCollection(ctx context.Context, db, collection string) ([]byte, error) {
-	url := fmt.Sprintf("%s/collection/%s/%s", c.BaseURL, db, collection)
+func (c *Client) DeleteCollection(ctx context.Context, collection string) ([]byte, error) {
+	url := fmt.Sprintf("%s/collection/%s/%s", c.BaseURL, c.DefaultUserDatabase, collection)
 	return c.doRequest(ctx, http.MethodDelete, url, nil)
 }

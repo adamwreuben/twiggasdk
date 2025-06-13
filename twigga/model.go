@@ -3,11 +3,13 @@ package twigga
 import "net/http"
 
 type Client struct {
-	BaseURL        string // Document API
-	WSBaseURL      string
-	AccountBaseURL string // Account API
-	Token          string
-	http           *http.Client
+	BaseURL             string // Document API
+	WSBaseURL           string
+	AccountBaseURL      string // Account API
+	Token               string
+	DefaultUserDatabase string // Provided from API
+	DefaultAuthDatabase string // Provided from API
+	http                *http.Client
 }
 
 type AppTokenRequest struct {
