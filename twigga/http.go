@@ -71,7 +71,7 @@ func (c *Client) QueryDocuments(ctx context.Context, collection string, filter m
 		return nil, err
 	}
 
-	listOfDocuments := doc["documents"].([]any) // fix
+	listOfDocuments := doc["documents"].([]any) // fix for now
 
 	return listOfDocuments, nil
 }
