@@ -8,7 +8,7 @@ import (
 )
 
 func (c *Client) GenerateAppToken(ctx context.Context, appID, appSecret string) (*AppTokenResponse, error) {
-	url := fmt.Sprintf("%s/application/token", c.AccountBaseURL)
+	url := fmt.Sprintf("%s/application/token", c.accountBaseURL)
 
 	reqBody := AppTokenRequest{
 		AppID:     appID,
@@ -29,7 +29,7 @@ func (c *Client) GenerateAppToken(ctx context.Context, appID, appSecret string) 
 }
 
 func (c *Client) Authenticate(ctx context.Context, redirectTo string) (*AuthenticateResponse, error) {
-	url := fmt.Sprintf("%s/application/authenticate", c.AccountBaseURL)
+	url := fmt.Sprintf("%s/application/authenticate", c.accountBaseURL)
 
 	reqBody := AuthenticateRequest{RedirectTo: redirectTo}
 
@@ -47,7 +47,7 @@ func (c *Client) Authenticate(ctx context.Context, redirectTo string) (*Authenti
 }
 
 func (c *Client) CreateAccount(ctx context.Context, req CreateAccountRequest) (*MessageResponse, error) {
-	url := fmt.Sprintf("%s/user/create", c.AccountBaseURL)
+	url := fmt.Sprintf("%s/user/create", c.accountBaseURL)
 
 	body, err := c.doRequest(ctx, http.MethodPost, url, req)
 	if err != nil {
@@ -63,7 +63,7 @@ func (c *Client) CreateAccount(ctx context.Context, req CreateAccountRequest) (*
 }
 
 func (c *Client) Login(ctx context.Context, email, password string) (*LoginResponse, error) {
-	url := fmt.Sprintf("%s/user/login", c.AccountBaseURL)
+	url := fmt.Sprintf("%s/user/login", c.accountBaseURL)
 
 	reqBody := LoginRequest{Email: email, Password: password}
 
@@ -81,7 +81,7 @@ func (c *Client) Login(ctx context.Context, email, password string) (*LoginRespo
 }
 
 func (c *Client) Logout(ctx context.Context, userID string) (*MessageResponse, error) {
-	url := fmt.Sprintf("%s/user/logout/%s", c.AccountBaseURL, userID)
+	url := fmt.Sprintf("%s/user/logout/%s", c.accountBaseURL, userID)
 
 	body, err := c.doRequest(ctx, http.MethodPost, url, nil)
 	if err != nil {
