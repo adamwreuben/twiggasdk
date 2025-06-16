@@ -97,17 +97,25 @@ func (c *Client) DocumentExists(ctx context.Context, collection string, filter m
 
 	body, err := c.doRequest(ctx, http.MethodPost, url, filter)
 	if err != nil {
+		fmt.Println("1.err: ", err.Error())
 		return false, err
 	}
 
 	var result struct {
 		Exists bool `json:"exists"`
 	}
-	if err := json.Unmarshal(body, &result); err != nil {
-		return false, err
+
+	fmt.Println("response: ", string(body))
+	if string(body) != "" {
+		if err := json.Unmarshal(body, &result); err != nil {
+			return false, err
+		}
+
+		return result.Exists, nil
 	}
 
-	return result.Exists, nil
+	return false, nil
+
 }
 
 // GetCollection fetches all documents from a table
