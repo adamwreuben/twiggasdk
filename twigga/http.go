@@ -38,7 +38,6 @@ func (c *Client) doRequest(ctx context.Context, method, url string, body any) ([
 	defer resp.Body.Close()
 
 	bodyBytes, err := io.ReadAll(resp.Body)
-	fmt.Println("doReq: ", resp.Body)
 	if err != nil {
 		return nil, resp.StatusCode, err
 	}
@@ -70,22 +69,23 @@ func (c *Client) GetDocument(ctx context.Context, collection, id string) ([]byte
 
 // return list of filetered documents
 func (c *Client) QueryDocuments(ctx context.Context, collection string, filter map[string]any) (map[string]interface{}, error) {
-	fmt.Println("WEWE herrer*")
 	url := fmt.Sprintf("%s/document/%s/%s/filter", c.baseURL, c.client.Twigga.DefaultDatabase, collection)
 
 	body, statusCode, err := c.doRequest(ctx, http.MethodPost, url, filter)
-	fmt.Println("statusCode for querying: ", statusCode)
 
 	if err != nil {
-		fmt.Println("do req error: ", err.Error())
 		return nil, err
 	}
 
 	if statusCode == http.StatusOK {
+
 		var doc map[string]interface{}
 		if err := json.Unmarshal(body, &doc); err != nil {
 			return nil, err
 		}
+
+		return doc, nil
+
 	}
 
 	if statusCode == 429 {
