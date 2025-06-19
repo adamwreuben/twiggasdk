@@ -118,10 +118,8 @@ func (c *Client) DocumentExists(ctx context.Context, collection string, filter m
 	url := fmt.Sprintf("%s/document/%s/%s/exists", c.baseURL, c.client.Twigga.DefaultDatabase, collection)
 
 	body, statusCode, err := c.doRequest(ctx, http.MethodPost, url, filter)
-	fmt.Println("response*: ", body, "statusCode: ", statusCode, "DefaultDatabase: ", c.client.Twigga.DefaultDatabase, "collection: ", collection)
 
 	if err != nil {
-		fmt.Println("1.err: ", err.Error())
 		return false, err
 	}
 
@@ -132,7 +130,6 @@ func (c *Client) DocumentExists(ctx context.Context, collection string, filter m
 	if statusCode == http.StatusOK {
 
 		if err := json.Unmarshal(body, &result); err != nil {
-			fmt.Println("unmarshal error:", err)
 			return false, err
 		}
 
@@ -143,9 +140,6 @@ func (c *Client) DocumentExists(ctx context.Context, collection string, filter m
 		return false, errors.New("too many request per IP, please try again later")
 	}
 
-	fmt.Println("Print resulst: ", string(body))
-
-	fmt.Println("*heeree*")
 	return false, nil
 
 }
