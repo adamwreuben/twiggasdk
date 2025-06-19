@@ -15,7 +15,7 @@ func (c *Client) GenerateAppToken(ctx context.Context, appID, appSecret string) 
 		AppSecret: appSecret,
 	}
 
-	body, err := c.doRequest(ctx, http.MethodPost, url, reqBody)
+	body, statusCode, err := c.doRequest(ctx, http.MethodPost, url, reqBody)
 	if err != nil {
 		return nil, err
 	}
@@ -25,6 +25,8 @@ func (c *Client) GenerateAppToken(ctx context.Context, appID, appSecret string) 
 		return nil, err
 	}
 
+	fmt.Println("statusCode: ", statusCode)
+
 	return &resp, nil
 }
 
@@ -33,7 +35,7 @@ func (c *Client) Authenticate(ctx context.Context, redirectTo string) (*Authenti
 
 	reqBody := AuthenticateRequest{RedirectTo: redirectTo}
 
-	body, err := c.doRequest(ctx, http.MethodPost, url, reqBody)
+	body, statusCode, err := c.doRequest(ctx, http.MethodPost, url, reqBody)
 	if err != nil {
 		return nil, err
 	}
@@ -43,13 +45,15 @@ func (c *Client) Authenticate(ctx context.Context, redirectTo string) (*Authenti
 		return nil, err
 	}
 
+	fmt.Println("statusCode: ", statusCode)
+
 	return &resp, nil
 }
 
 func (c *Client) CreateAccount(ctx context.Context, req CreateAccountRequest) (*MessageResponse, error) {
 	url := fmt.Sprintf("%s/user/create", c.accountBaseURL)
 
-	body, err := c.doRequest(ctx, http.MethodPost, url, req)
+	body, statusCode, err := c.doRequest(ctx, http.MethodPost, url, req)
 	if err != nil {
 		return nil, err
 	}
@@ -58,6 +62,8 @@ func (c *Client) CreateAccount(ctx context.Context, req CreateAccountRequest) (*
 	if err := json.Unmarshal(body, &resp); err != nil {
 		return nil, err
 	}
+
+	fmt.Println("statusCode: ", statusCode)
 
 	return &resp, nil
 }
@@ -67,7 +73,7 @@ func (c *Client) Login(ctx context.Context, email, password string) (*LoginRespo
 
 	reqBody := LoginRequest{Email: email, Password: password}
 
-	body, err := c.doRequest(ctx, http.MethodPost, url, reqBody)
+	body, statusCode, err := c.doRequest(ctx, http.MethodPost, url, reqBody)
 	if err != nil {
 		return nil, err
 	}
@@ -77,13 +83,15 @@ func (c *Client) Login(ctx context.Context, email, password string) (*LoginRespo
 		return nil, err
 	}
 
+	fmt.Println("statusCode: ", statusCode)
+
 	return &resp, nil
 }
 
 func (c *Client) Logout(ctx context.Context, userID string) (*MessageResponse, error) {
 	url := fmt.Sprintf("%s/user/logout/%s", c.accountBaseURL, userID)
 
-	body, err := c.doRequest(ctx, http.MethodPost, url, nil)
+	body, statusCode, err := c.doRequest(ctx, http.MethodPost, url, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -92,6 +100,8 @@ func (c *Client) Logout(ctx context.Context, userID string) (*MessageResponse, e
 	if err := json.Unmarshal(body, &resp); err != nil {
 		return nil, err
 	}
+
+	fmt.Println("statusCode: ", statusCode)
 
 	return &resp, nil
 }

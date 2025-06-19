@@ -4,25 +4,26 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
 )
 
 // imp
-func (c *Client) doRequest(ctx context.Context, method, url string, body any) ([]byte, error) {
+func (c *Client) doRequest(ctx context.Context, method, url string, body any) ([]byte, int, error) {
 	var reader io.Reader
 	if body != nil {
 		b, err := json.Marshal(body)
 		if err != nil {
-			return nil, err
+			return nil, 0, err
 		}
 		reader = bytes.NewReader(b)
 	}
 
 	req, err := http.NewRequestWithContext(ctx, method, url, reader)
 	if err != nil {
-		return nil, err
+		return nil, 0, err
 	}
 
 	req.Header.Set("Content-Type", "application/json")
@@ -32,52 +33,73 @@ func (c *Client) doRequest(ctx context.Context, method, url string, body any) ([
 
 	resp, err := c.http.Do(req)
 	if err != nil {
-		return nil, err
+		return nil, 0, err
 	}
 	defer resp.Body.Close()
 
-	return io.ReadAll(resp.Body)
+	bodyBytes, err := io.ReadAll(resp.Body)
+	fmt.Println("doReq: ", resp.Body)
+	if err != nil {
+		return nil, resp.StatusCode, err
+	}
+
+	return bodyBytes, resp.StatusCode, nil
 }
 
 // CreateDocumentAuto creates a new document with auto-generated ID
 func (c *Client) CreateDocumentAuto(ctx context.Context, collection string, doc any) ([]byte, error) {
 	url := fmt.Sprintf("%s/document/%s/%s", c.baseURL, c.client.Twigga.DefaultDatabase, collection)
-	return c.doRequest(ctx, http.MethodPost, url, doc)
+	res, _, err := c.doRequest(ctx, http.MethodPost, url, doc)
+	return res, err
 }
 
 // CreateDocumentWithID creates a document with a specified ID
 func (c *Client) CreateDocumentWithID(ctx context.Context, collection, id string, doc any) ([]byte, error) {
 	url := fmt.Sprintf("%s/document/%s/%s/%s", c.baseURL, c.client.Twigga.DefaultDatabase, collection, id)
-	return c.doRequest(ctx, http.MethodPost, url, doc)
+	res, _, err := c.doRequest(ctx, http.MethodPost, url, doc)
+	return res, err
 }
 
 // GetDocument fetches a document by ID
 func (c *Client) GetDocument(ctx context.Context, collection, id string) ([]byte, error) {
 	url := fmt.Sprintf("%s/document/%s/%s/%s", c.baseURL, c.client.Twigga.DefaultDatabase, collection, id)
-	return c.doRequest(ctx, http.MethodGet, url, nil)
+
+	res, _, err := c.doRequest(ctx, http.MethodGet, url, nil)
+	return res, err
 }
 
 // return list of filetered documents
 func (c *Client) QueryDocuments(ctx context.Context, collection string, filter map[string]any) (map[string]interface{}, error) {
+	fmt.Println("WEWE herrer*")
 	url := fmt.Sprintf("%s/document/%s/%s/filter", c.baseURL, c.client.Twigga.DefaultDatabase, collection)
 
-	body, err := c.doRequest(ctx, http.MethodPost, url, filter)
+	body, statusCode, err := c.doRequest(ctx, http.MethodPost, url, filter)
+	fmt.Println("statusCode for querying: ", statusCode)
+
 	if err != nil {
+		fmt.Println("do req error: ", err.Error())
 		return nil, err
 	}
 
-	var doc map[string]interface{}
-	if err := json.Unmarshal(body, &doc); err != nil {
-		return nil, err
+	if statusCode == http.StatusOK {
+		var doc map[string]interface{}
+		if err := json.Unmarshal(body, &doc); err != nil {
+			return nil, err
+		}
 	}
 
-	return doc, nil
+	if statusCode == 429 {
+		return nil, errors.New("too many request per IP, please try again later")
+	}
+
+	return nil, errors.New("Unknown error!")
 }
 
 func (c *Client) CollectionExists(ctx context.Context, collection string) (bool, error) {
 	url := fmt.Sprintf("%s/collection/%s/%s/exists", c.baseURL, c.client.Twigga.DefaultDatabase, collection)
 
-	body, err := c.doRequest(ctx, http.MethodGet, url, nil)
+	body, _, err := c.doRequest(ctx, http.MethodGet, url, nil)
+
 	if err != nil {
 		return false, err
 	}
@@ -95,7 +117,9 @@ func (c *Client) CollectionExists(ctx context.Context, collection string) (bool,
 func (c *Client) DocumentExists(ctx context.Context, collection string, filter map[string]any) (bool, error) {
 	url := fmt.Sprintf("%s/document/%s/%s/exists", c.baseURL, c.client.Twigga.DefaultDatabase, collection)
 
-	body, err := c.doRequest(ctx, http.MethodPost, url, filter)
+	body, statusCode, err := c.doRequest(ctx, http.MethodPost, url, filter)
+	fmt.Println("response*: ", body, "statusCode: ", statusCode, "DefaultDatabase: ", c.client.Twigga.DefaultDatabase, "collection: ", collection)
+
 	if err != nil {
 		fmt.Println("1.err: ", err.Error())
 		return false, err
@@ -105,15 +129,23 @@ func (c *Client) DocumentExists(ctx context.Context, collection string, filter m
 		Exists bool `json:"exists"`
 	}
 
-	fmt.Println("response: ", string(body))
-	if string(body) != "" {
+	if statusCode == http.StatusOK {
+
 		if err := json.Unmarshal(body, &result); err != nil {
+			fmt.Println("unmarshal error:", err)
 			return false, err
 		}
 
 		return result.Exists, nil
 	}
 
+	if statusCode == 429 { // DNS too many request
+		return false, errors.New("too many request per IP, please try again later")
+	}
+
+	fmt.Println("Print resulst: ", string(body))
+
+	fmt.Println("*heeree*")
 	return false, nil
 
 }
@@ -121,41 +153,55 @@ func (c *Client) DocumentExists(ctx context.Context, collection string, filter m
 // GetCollection fetches all documents from a table
 func (c *Client) GetCollection(ctx context.Context, collection string) ([]byte, error) {
 	url := fmt.Sprintf("%s/document/%s/%s", c.baseURL, c.client.Twigga.DefaultDatabase, collection)
-	return c.doRequest(ctx, http.MethodGet, url, nil)
+
+	res, _, err := c.doRequest(ctx, http.MethodGet, url, nil)
+	return res, err
 }
 
 // UpdateDocument updates a document by ID
 func (c *Client) UpdateDocument(ctx context.Context, collection, id string, doc any) ([]byte, error) {
 	url := fmt.Sprintf("%s/document/%s/%s/%s", c.baseURL, c.client.Twigga.DefaultDatabase, collection, id)
-	return c.doRequest(ctx, http.MethodPut, url, doc)
+
+	res, _, err := c.doRequest(ctx, http.MethodPut, url, doc)
+	return res, err
 }
 
 // DeleteDocument deletes a document by ID
 func (c *Client) DeleteDocument(ctx context.Context, collection, id string) ([]byte, error) {
 	url := fmt.Sprintf("%s/document/%s/%s/%s", c.baseURL, c.client.Twigga.DefaultDatabase, collection, id)
-	return c.doRequest(ctx, http.MethodDelete, url, nil)
+
+	res, _, err := c.doRequest(ctx, http.MethodDelete, url, nil)
+	return res, err
 }
 
 // CreateDatabase creates a new database
 func (c *Client) CreateDatabase(ctx context.Context) ([]byte, error) {
 	url := fmt.Sprintf("%s/database/%s", c.baseURL, c.client.Twigga.DefaultDatabase)
-	return c.doRequest(ctx, http.MethodPost, url, nil)
+
+	res, _, err := c.doRequest(ctx, http.MethodPost, url, nil)
+	return res, err
 }
 
 // DeleteDatabase deletes a database
 func (c *Client) DeleteDatabase(ctx context.Context) ([]byte, error) {
 	url := fmt.Sprintf("%s/database/%s", c.baseURL, c.client.Twigga.DefaultDatabase)
-	return c.doRequest(ctx, http.MethodDelete, url, nil)
+
+	res, _, err := c.doRequest(ctx, http.MethodDelete, url, nil)
+	return res, err
 }
 
 // ListAllCollections lists collections in a database
 func (c *Client) ListAllCollections(ctx context.Context) ([]byte, error) {
 	url := fmt.Sprintf("%s/database/%s", c.baseURL, c.client.Twigga.DefaultDatabase)
-	return c.doRequest(ctx, http.MethodGet, url, nil)
+
+	res, _, err := c.doRequest(ctx, http.MethodGet, url, nil)
+	return res, err
 }
 
 // DeleteCollection deletes a collection in a database
 func (c *Client) DeleteCollection(ctx context.Context, collection string) ([]byte, error) {
 	url := fmt.Sprintf("%s/collection/%s/%s", c.baseURL, c.client.Twigga.DefaultDatabase, collection)
-	return c.doRequest(ctx, http.MethodDelete, url, nil)
+
+	res, _, err := c.doRequest(ctx, http.MethodDelete, url, nil)
+	return res, err
 }
