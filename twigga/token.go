@@ -8,7 +8,9 @@ import (
 )
 
 func (c *Client) GetTokenData(ctx context.Context, token string) (*TokenData, error) {
-	url := fmt.Sprintf("%s/data/%s", c.accountBaseURL, token)
+	url := fmt.Sprintf("%s/user/token/%s", c.accountBaseURL, token)
+
+	fmt.Println("url: ", url)
 
 	body, statusCode, err := c.doRequest(ctx, http.MethodGet, url, nil)
 	if err != nil {

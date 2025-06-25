@@ -40,8 +40,9 @@ type AuthenticateResponse struct {
 }
 
 type TokenData struct {
-	ID    string `json:"id"`
-	Email string `json:"email"`
+	ID     string        `json:"id"`
+	Email  string        `json:"email"`
+	Events []interface{} `json:"events"`
 }
 
 type CreateAccountRequest struct {
