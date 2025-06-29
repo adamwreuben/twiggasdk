@@ -2,7 +2,6 @@ package twigga
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"net/http"
 )
@@ -21,7 +20,7 @@ func (c *Client) GenerateAppToken(ctx context.Context, appID, appSecret string) 
 	}
 
 	var resp AppTokenResponse
-	if err := json.Unmarshal(body, &resp); err != nil {
+	if err := Unmarshal(body, &resp); err != nil {
 		return nil, err
 	}
 
@@ -41,7 +40,7 @@ func (c *Client) Authenticate(ctx context.Context, redirectTo string) (*Authenti
 	}
 
 	var resp AuthenticateResponse
-	if err := json.Unmarshal(body, &resp); err != nil {
+	if err := Unmarshal(body, &resp); err != nil {
 		return nil, err
 	}
 
@@ -59,7 +58,7 @@ func (c *Client) CreateAccount(ctx context.Context, req CreateAccountRequest) (*
 	}
 
 	var resp MessageResponse
-	if err := json.Unmarshal(body, &resp); err != nil {
+	if err := Unmarshal(body, &resp); err != nil {
 		return nil, err
 	}
 
@@ -79,7 +78,7 @@ func (c *Client) Login(ctx context.Context, email, password string) (*LoginRespo
 	}
 
 	var resp LoginResponse
-	if err := json.Unmarshal(body, &resp); err != nil {
+	if err := Unmarshal(body, &resp); err != nil {
 		return nil, err
 	}
 
@@ -97,7 +96,7 @@ func (c *Client) Logout(ctx context.Context, userID string) (*MessageResponse, e
 	}
 
 	var resp MessageResponse
-	if err := json.Unmarshal(body, &resp); err != nil {
+	if err := Unmarshal(body, &resp); err != nil {
 		return nil, err
 	}
 

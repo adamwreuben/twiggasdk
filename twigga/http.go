@@ -3,7 +3,6 @@ package twigga
 import (
 	"bytes"
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -14,7 +13,7 @@ import (
 func (c *Client) doRequest(ctx context.Context, method, url string, body any) ([]byte, int, error) {
 	var reader io.Reader
 	if body != nil {
-		b, err := json.Marshal(body)
+		b, err := Marshal(body)
 		if err != nil {
 			return nil, 0, err
 		}
@@ -73,6 +72,8 @@ func (c *Client) QueryDocuments(ctx context.Context, collection string, filter m
 
 	body, statusCode, err := c.doRequest(ctx, http.MethodPost, url, filter)
 
+	fmt.Println("statusCode: ", statusCode)
+
 	if err != nil {
 		return nil, err
 	}
@@ -80,7 +81,7 @@ func (c *Client) QueryDocuments(ctx context.Context, collection string, filter m
 	if statusCode == http.StatusOK {
 
 		var doc map[string]interface{}
-		if err := json.Unmarshal(body, &doc); err != nil {
+		if err := Unmarshal(body, &doc); err != nil {
 			return nil, err
 		}
 
@@ -107,7 +108,7 @@ func (c *Client) CollectionExists(ctx context.Context, collection string) (bool,
 	var result struct {
 		Exists bool `json:"exists"`
 	}
-	if err := json.Unmarshal(body, &result); err != nil {
+	if err := Unmarshal(body, &result); err != nil {
 		return false, err
 	}
 
@@ -129,7 +130,7 @@ func (c *Client) DocumentExists(ctx context.Context, collection string, filter m
 
 	if statusCode == http.StatusOK {
 
-		if err := json.Unmarshal(body, &result); err != nil {
+		if err := Unmarshal(body, &result); err != nil {
 			return false, err
 		}
 

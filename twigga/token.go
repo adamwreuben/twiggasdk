@@ -2,7 +2,6 @@ package twigga
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"net/http"
 )
@@ -18,7 +17,7 @@ func (c *Client) GetTokenData(ctx context.Context, token string) (*TokenData, er
 	}
 
 	var resp TokenData
-	if err := json.Unmarshal(body, &resp); err != nil {
+	if err := Unmarshal(body, &resp); err != nil {
 		return nil, err
 	}
 
