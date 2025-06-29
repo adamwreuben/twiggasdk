@@ -77,6 +77,8 @@ func (c *Client) Login(ctx context.Context, email, password string) (*LoginRespo
 		return nil, err
 	}
 
+	fmt.Println("LoginRequest body: ", string(body))
+
 	var resp LoginResponse
 	if err := Unmarshal(body, &resp); err != nil {
 		return nil, err
