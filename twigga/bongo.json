@@ -1,8 +1,8 @@
 {
-  "token": "",
+  "token": "obtain bongo.json from https://twigga.bongocloud.co.tz",
   "auth": {
-    "appId": "h6smBGEStXsapuL9pefa",
-    "appSecret": "t21StjD2OByDqnQWxv1I"
+    "appId": "",
+    "appSecret": ""
   },
-  "twigga": { "databaseId": "Authentication" }
+  "twigga": { "databaseId": "" }
 }

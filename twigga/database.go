@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"net/url"
 )
 
 // imp
@@ -68,31 +69,37 @@ func (c *Client) GetDocument(ctx context.Context, collection, id string) ([]byte
 }
 
 // return list of filetered documents
-func (c *Client) QueryDocuments(ctx context.Context, collection string, filter map[string]any) (map[string]interface{}, error) {
-	url := fmt.Sprintf("%s/document/%s/%s/filter", c.baseURL, c.client.Twigga.DefaultDatabase, collection)
+func (c *Client) QueryDocuments(
+	ctx context.Context,
+	collection string,
+	filter map[string]any,
+) (*ReadAllDocumentsResult, error) {
 
-	body, statusCode, err := c.doRequest(ctx, http.MethodPost, url, filter)
+	url := fmt.Sprintf("%s/document/%s/%s/filter",
+		c.baseURL,
+		c.client.Twigga.DefaultDatabase,
+		collection,
+	)
 
+	body, status, err := c.doRequest(ctx, http.MethodPost, url, filter)
 	if err != nil {
 		return nil, err
 	}
 
-	if statusCode == http.StatusOK {
-
-		var doc map[string]interface{}
-		if err := json.Unmarshal(body, &doc); err != nil {
-			return nil, err
-		}
-
-		return doc, nil
-
+	if status == http.StatusTooManyRequests {
+		return nil, errors.New("too many requests per IP, please try again later")
 	}
 
-	if statusCode == 429 {
-		return nil, errors.New("too many request per IP, please try again later")
+	if status != http.StatusOK {
+		return nil, fmt.Errorf("unexpected status %d: %s", status, string(body))
 	}
 
-	return nil, errors.New("Unknown error!")
+	var res ReadAllDocumentsResult
+	if err := json.Unmarshal(body, &res); err != nil {
+		return nil, err
+	}
+
+	return &res, nil
 }
 
 func (c *Client) CollectionExists(ctx context.Context, collection string) (bool, error) {
@@ -127,6 +134,8 @@ func (c *Client) DocumentExists(ctx context.Context, collection string, filter m
 		Exists bool `json:"exists"`
 	}
 
+	fmt.Println("body: ", string(body))
+
 	if statusCode == http.StatusOK {
 
 		if err := json.Unmarshal(body, &result); err != nil {
@@ -137,6 +146,7 @@ func (c *Client) DocumentExists(ctx context.Context, collection string, filter m
 	}
 
 	if statusCode == 429 { // DNS too many request
+
 		return false, errors.New("too many request per IP, please try again later")
 	}
 
@@ -145,11 +155,43 @@ func (c *Client) DocumentExists(ctx context.Context, collection string, filter m
 }
 
 // GetCollection fetches all documents from a table
-func (c *Client) GetCollection(ctx context.Context, collection string) ([]byte, error) {
-	url := fmt.Sprintf("%s/document/%s/%s", c.baseURL, c.client.Twigga.DefaultDatabase, collection)
+func (c *Client) GetCollection(
+	ctx context.Context,
+	collection string,
+	options ...map[string]string, // optional params
+) (*ReadAllDocumentsResult, error) {
 
-	res, _, err := c.doRequest(ctx, http.MethodGet, url, nil)
-	return res, err
+	// Default params
+	params := url.Values{}
+	params.Set("limit", "50")
+	params.Set("sort", "desc")
+	params.Set("field", "id")
+
+	// If options provided, override defaults
+	if len(options) > 0 {
+		for k, v := range options[0] {
+			params.Set(k, v)
+		}
+	}
+
+	base := fmt.Sprintf("%s/document/%s/%s", c.baseURL, c.client.Twigga.DefaultDatabase, collection)
+	fullURL := fmt.Sprintf("%s?%s", base, params.Encode())
+
+	body, status, err := c.doRequest(ctx, http.MethodGet, fullURL, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	if status != http.StatusOK {
+		return nil, fmt.Errorf("unexpected status %d: %s", status, string(body))
+	}
+
+	var res ReadAllDocumentsResult
+	if err := json.Unmarshal(body, &res); err != nil {
+		return nil, err
+	}
+
+	return &res, nil
 }
 
 // UpdateDocument updates a document by ID

@@ -1,11 +1,13 @@
 package twigga
 
-import "net/http"
+import (
+	"net/http"
+)
 
 type BongoCloudClient struct {
 	Token string `json:"token"`
 	Auth  struct {
-		AppId     string `json:appId"`
+		AppId     string `json:"appId"`
 		AppSecret string `json:"appSecret"`
 	} `json:"auth"`
 	Twigga struct {
@@ -51,10 +53,6 @@ type CreateAccountRequest struct {
 	Password  string `json:"password"`
 }
 
-type MessageResponse struct {
-	Message string `json:"message"`
-}
-
 type LoginRequest struct {
 	Email    string `json:"email"`
 	Password string `json:"password"`
@@ -62,4 +60,13 @@ type LoginRequest struct {
 
 type LoginResponse struct {
 	AccessToken string `json:"accessToken"`
+}
+
+type MessageResponse struct {
+	Message string `json:"message"`
+}
+
+type ReadAllDocumentsResult struct {
+	Documents  []map[string]any `json:"documents"`
+	NextCursor any              `json:"nextCursor"`
 }
