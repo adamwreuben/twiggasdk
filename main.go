@@ -19,25 +19,19 @@ func main() {
 	// 	"table":    "test_collection",
 	// }
 
-	// docId := fmt.Sprintf(`%s_%s`, "0cDQnjdbLwGPZsCAfh87", "test_collection")
+	// docId := fmt.Sprintf(`%s_%s`, "", "")
 
-	// resp, err := twiggaClient.CreateDocumentWithID(context.Background(), "ChangeFeedsData", docId, dataToAdd)
+	// resp, err := twiggaClient.CreateDocumentWithID(context.Background(), "", docId, dataToAdd)
 	// if err != nil {
 	// 	fmt.Println("CreateDocumentAuto Error: ", err.Error())
 	// }
 
 	// fmt.Println("resp: ", string(resp))
 
-	// found, err := twiggaClient.DocumentExists(context.Background(), "Applications", dataToCheck)
+	// found, err := twiggaClient.DocumentExists(context.Background(), "", dataToCheck)
 	// if err != nil {
 	// 	fmt.Println("documentFound Error: ", err.Error())
 	// }
-
-	// log.Println("Found: ", found)
-
-	// qresp, _ := twiggaClient.QueryDocuments(context.Background(), "MeterRegistration", map[string]interface{}{
-	// 	"imei": "862273041539147",
-	// })
 
 	// docsRaw, ok := qresp["documents"].([]interface{})
 	// if !ok || len(docsRaw) == 0 {

@@ -1,7 +1,6 @@
 package twigga
 
 import (
-	"encoding/json"
 	"io"
 	"os"
 )
@@ -19,7 +18,7 @@ func LoadConfig(filename string) (*BongoCloudClient, error) {
 	}
 
 	var config BongoCloudClient
-	err = json.Unmarshal(bytes, &config)
+	err = Unmarshal(bytes, &config)
 	if err != nil {
 		return nil, err
 	}
