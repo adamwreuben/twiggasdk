@@ -68,9 +68,11 @@ func main() {
 	// fmt.Println("messages: ", messages[0])
 
 	dataToFilter := map[string]interface{}{
-		"name": "Willy William",
+		"tokenId": "35I2IOF68sHEjIIXH8hWeOLfGsk",
 	}
-	res, _ := twiggaClient.QueryDocuments(context.Background(), "Students", dataToFilter)
+
+	// twiggaClient.CreateDocumentAuto(context.Background(), "testing", dataToFilter)
+	res, _ := twiggaClient.QueryDocuments(context.Background(), "Sessions", dataToFilter)
 	fmt.Println("Response")
 	fmt.Println(res)
 
