@@ -1,8 +1,8 @@
 {
   "token": "35KMCTvAx0IPWAkZsQT4sV6QRZM",
   "auth": {
-    "appId": "BBfFiR3bkQIe8j95QKKO",
-    "appSecret": "NYy45ASlLIPIaanIzxON"
+    "appId": "twigga",
+    "appSecret": "f1e914fd-be7e-4df2-b5fe-e8645226683c"
   },
   "twigga": { "databaseId": "Authentication" }
 }

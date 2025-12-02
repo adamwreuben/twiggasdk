@@ -72,7 +72,10 @@ func main() {
 	}
 
 	// twiggaClient.CreateDocumentAuto(context.Background(), "testing", dataToFilter)
-	res, _ := twiggaClient.QueryDocuments(context.Background(), "Sessions", dataToFilter)
+	res, err := twiggaClient.QueryDocuments(context.Background(), "Sessions", dataToFilter)
+	if err != nil {
+		fmt.Println("QueryDocuments error: ", err.Error())
+	}
 	fmt.Println("Response")
 	fmt.Println(res)
 
