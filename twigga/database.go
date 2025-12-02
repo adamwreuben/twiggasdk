@@ -134,8 +134,6 @@ func (c *Client) DocumentExists(ctx context.Context, collection string, filter m
 		Exists bool `json:"exists"`
 	}
 
-	fmt.Println("body: ", string(body))
-
 	if statusCode == http.StatusOK {
 
 		if err := json.Unmarshal(body, &result); err != nil {
