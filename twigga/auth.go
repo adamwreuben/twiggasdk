@@ -2,6 +2,7 @@ package twigga
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"net/http"
 )
@@ -105,4 +106,37 @@ func (c *Client) Logout(ctx context.Context, userID string) (*MessageResponse, e
 	fmt.Println("statusCode: ", statusCode)
 
 	return &resp, nil
+}
+
+func (c *Client) CheckAuthorization(ctx context.Context, subID, subType, relation, objType, objID string) (bool, error) {
+	url := fmt.Sprintf("%s/authorize/check?subjectId=%s&subjectType=%s&relation=%s&objectType=%s&objectId=%s",
+		c.baseURL, subID, subType, relation, objType, objID)
+
+	body, status, err := c.doRequest(ctx, http.MethodGet, url, nil)
+	if err != nil {
+		return false, err
+	}
+
+	if status != http.StatusOK {
+		return false, fmt.Errorf("auth check failed with status %d", status)
+	}
+
+	var result struct {
+		Allowed bool `json:"allowed"`
+	}
+	if err := json.Unmarshal(body, &result); err != nil {
+		return false, err
+	}
+
+	return result.Allowed, nil
+}
+
+func (c *Client) AssignAuthorization(ctx context.Context, authTuple AuthorizationTuple) error {
+	url := fmt.Sprintf("%s/authorize/write", c.baseURL)
+	_, status, err := c.doRequest(ctx, http.MethodPost, url, authTuple)
+
+	if status != http.StatusOK && status != http.StatusCreated {
+		return fmt.Errorf("failed to assign authorization, status: %d", status)
+	}
+	return err
 }
