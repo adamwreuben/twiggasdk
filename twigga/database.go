@@ -72,15 +72,29 @@ func (c *Client) QueryDocuments(
 	ctx context.Context,
 	collection string,
 	filter map[string]any,
+	options ...map[string]string,
 ) (*ReadAllDocumentsResult, error) {
 
-	url := fmt.Sprintf("%s/document/%s/%s/filter",
+	basePath := fmt.Sprintf("%s/document/%s/%s/filter",
 		c.baseURL,
 		c.client.Twigga.DefaultDatabase,
 		collection,
 	)
 
-	body, status, err := c.doRequest(ctx, http.MethodPost, url, filter)
+	u, err := url.Parse(basePath)
+	if err != nil {
+		return nil, err
+	}
+
+	if len(options) > 0 {
+		q := u.Query()
+		for k, v := range options[0] {
+			q.Set(k, v)
+		}
+		u.RawQuery = q.Encode()
+	}
+
+	body, status, err := c.doRequest(ctx, http.MethodPost, u.String(), filter)
 	if err != nil {
 		return nil, err
 	}

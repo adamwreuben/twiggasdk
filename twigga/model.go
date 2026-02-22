@@ -80,3 +80,17 @@ type AuthorizationTuple struct {
 	SubjectType string `json:"subjectType"` // "user" or "group"
 	SubjectID   string `json:"subjectId"`
 }
+
+type Query struct {
+	Where   []Condition `json:"where"`
+	OrderBy string      `json:"orderBy"` // Field name
+	Sort    string      `json:"sort"`    // "asc" or "desc"
+	Limit   int         `json:"limit"`
+	After   any         `json:"after"` // The Cursor
+}
+
+type Condition struct {
+	Field    string `json:"field"`
+	Operator string `json:"operator"` // "==", ">", "<", "array-contains", "in"
+	Value    any    `json:"value"`
+}
