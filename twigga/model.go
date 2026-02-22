@@ -69,6 +69,7 @@ type MessageResponse struct {
 
 type ReadAllDocumentsResult struct {
 	Documents  []map[string]any `json:"documents"`
+	Total      int              `json:"total"`
 	NextCursor any              `json:"nextCursor"`
 }
 
