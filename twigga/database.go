@@ -59,6 +59,29 @@ func (c *Client) CreateDocumentWithID(ctx context.Context, collection, id string
 	return res, err
 }
 
+func (c *Client) CreateDocumentsBulk(ctx context.Context, collection string, docs []any, groupFields []string) (string, error) {
+	// Construct the Bulk URL
+	u, _ := url.Parse(fmt.Sprintf("%s/document/%s/%s/bulk", c.baseURL, c.client.Twigga.DefaultDatabase, collection))
+
+	q := u.Query()
+	for _, f := range groupFields {
+		q.Add("group", f)
+	}
+	u.RawQuery = q.Encode()
+
+	// Execute the request
+	body, statusCode, err := c.doRequest(ctx, http.MethodPost, u.String(), docs)
+	if err != nil {
+		return "", err
+	}
+
+	if statusCode != http.StatusOK {
+		return "", fmt.Errorf("bulk insert failed with status: %d, body: %s", statusCode, string(body))
+	}
+
+	return string(body), nil
+}
+
 // GetDocument fetches a document by ID
 func (c *Client) GetDocument(ctx context.Context, collection, id string) ([]byte, error) {
 	url := fmt.Sprintf("%s/document/%s/%s/%s", c.baseURL, c.client.Twigga.DefaultDatabase, collection, id)
