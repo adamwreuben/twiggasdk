@@ -1,11 +1,11 @@
 package twigga
 
 const (
-	BaseURL        = "https://twiga.bongocloud.co.tz"
-	WSBaseURL      = "wss://twiga.bongocloud.co.tz"
-	AccountBaseURL = "https://account.bongocloud.co.tz"
+	PROD_BaseURL        = "https://twiga.bongocloud.co.tz"
+	PROD_WSBaseURL      = "wss://twiga.bongocloud.co.tz"
+	PROD_AccountBaseURL = "https://account.bongocloud.co.tz"
 
-	// BaseURL        = "http://localhost:9867"
-	// WSBaseURL      = "wss://localhost:9867"
-	// AccountBaseURL = "https://localhost:9889"
+	TEST_BaseURL        = "http://localhost:9867"
+	TEST_WSBaseURL      = "wss://localhost:9867"
+	TEST_AccountBaseURL = "https://localhost:9889"
 )

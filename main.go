@@ -8,7 +8,7 @@ import (
 )
 
 func main() {
-	twiggaClient, err := twigga.NewTwiggaClient("./twigga/bongo.json")
+	twiggaClient, err := twigga.NewTwiggaClient("./twigga/bongo.json", twigga.TEST)
 	if err != nil {
 		fmt.Println("error**: ", err.Error())
 		return
