@@ -8,7 +8,6 @@ import (
 	"github.com/gorilla/websocket"
 )
 
-// im
 func (c *Client) ListenToDocumentChanges(db, table, id string) (*websocket.Conn, error) {
 	endpoint := fmt.Sprintf("%s/document/%s/%s/%s/changes", c.wSBaseURL, db, table, id)
 	return c.openWS(endpoint)

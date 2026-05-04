@@ -1,8 +1,8 @@
 {
-  "token": "",
-  "auth": {
-    "appId": "",
-    "appSecret": ""
-  },
-  "twigga": { "databaseId": "" }
+  "type": "service_account",
+  "project_id": "xxxxxxx",
+  "client_id": "client_12345abcde",
+  "client_secret": "secret_abc123xyz890",
+  "database_id": "xxxxxxxx",
+  "auth_uri": "https://account.bongocloud.co.tz/oauth/token"
 }

@@ -1,67 +1,75 @@
 package twigga
 
 import (
-	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io"
 	"net/http"
 	"net/url"
+
+	"github.com/gorilla/websocket"
 )
 
-func (c *Client) doRequest(ctx context.Context, method, url string, body any) ([]byte, int, error) {
-	var reader io.Reader
-	if body != nil {
-		b, err := json.Marshal(body)
-		if err != nil {
-			return nil, 0, err
-		}
-		reader = bytes.NewReader(b)
-	}
-
-	req, err := http.NewRequestWithContext(ctx, method, url, reader)
-	if err != nil {
-		return nil, 0, err
-	}
-
-	req.Header.Set("Content-Type", "application/json")
-	if c.client.Token != "" {
-		req.Header.Set("BONGO-TOKEN", c.client.Token)
-	}
-
-	resp, err := c.http.Do(req)
-	if err != nil {
-		return nil, 0, err
-	}
-	defer resp.Body.Close()
-
-	bodyBytes, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return nil, resp.StatusCode, err
-	}
-
-	return bodyBytes, resp.StatusCode, nil
+type DatabaseService struct {
+	client *httpClient
+	dbId   string
 }
 
-// CreateDocumentAuto creates a new document with auto-generated ID
-func (c *Client) CreateDocumentAuto(ctx context.Context, collection string, doc any) ([]byte, error) {
-	url := fmt.Sprintf("%s/document/%s/%s", c.baseURL, c.client.Twigga.DefaultDatabase, collection)
-	res, _, err := c.doRequest(ctx, http.MethodPost, url, doc)
+// Collection gives you access to a specific table
+func (d *DatabaseService) Collection(name string) *CollectionReference {
+	return &CollectionReference{
+		client: d.client,
+		dbId:   d.dbId,
+		name:   name,
+	}
+}
+
+func (d *DatabaseService) CreateDatabase(ctx context.Context) ([]byte, error) {
+	url := fmt.Sprintf("%s/database/%s", d.client.baseURL, d.dbId)
+	res, _, err := d.client.doRequest(ctx, http.MethodPost, url, nil)
 	return res, err
 }
 
-// CreateDocumentWithID creates a document with a specified ID
-func (c *Client) CreateDocumentWithID(ctx context.Context, collection, id string, doc any) ([]byte, error) {
-	url := fmt.Sprintf("%s/document/%s/%s/%s", c.baseURL, c.client.Twigga.DefaultDatabase, collection, id)
-	res, _, err := c.doRequest(ctx, http.MethodPost, url, doc)
+func (d *DatabaseService) DeleteDatabase(ctx context.Context) ([]byte, error) {
+	url := fmt.Sprintf("%s/database/%s", d.client.baseURL, d.dbId)
+	res, _, err := d.client.doRequest(ctx, http.MethodDelete, url, nil)
 	return res, err
 }
 
-func (c *Client) CreateDocumentsBulk(ctx context.Context, collection string, docs []any, groupFields []string) (string, error) {
-	// Construct the Bulk URL
-	u, _ := url.Parse(fmt.Sprintf("%s/document/%s/%s/bulk", c.baseURL, c.client.Twigga.DefaultDatabase, collection))
+func (d *DatabaseService) ListCollections(ctx context.Context) ([]byte, error) {
+	url := fmt.Sprintf("%s/database/%s", d.client.baseURL, d.dbId)
+	res, _, err := d.client.doRequest(ctx, http.MethodGet, url, nil)
+	return res, err
+}
+
+// Collection reference
+type CollectionReference struct {
+	client *httpClient
+	dbId   string
+	name   string
+}
+
+// Doc drills down into a specific document by ID
+func (c *CollectionReference) Doc(id string) *DocumentReference {
+	return &DocumentReference{
+		client: c.client,
+		dbId:   c.dbId,
+		coll:   c.name,
+		id:     id,
+	}
+}
+
+// Add creates a document with an Auto-Generated ID
+func (c *CollectionReference) Add(ctx context.Context, data any) ([]byte, error) {
+	url := fmt.Sprintf("%s/document/%s/%s", c.client.baseURL, c.dbId, c.name)
+	res, _, err := c.client.doRequest(ctx, http.MethodPost, url, data)
+	return res, err
+}
+
+// BulkAdd inserts multiple documents at once
+func (c *CollectionReference) BulkAdd(ctx context.Context, docs []any, groupFields []string) (string, error) {
+	u, _ := url.Parse(fmt.Sprintf("%s/document/%s/%s/bulk", c.client.baseURL, c.dbId, c.name))
 
 	q := u.Query()
 	for _, f := range groupFields {
@@ -69,46 +77,36 @@ func (c *Client) CreateDocumentsBulk(ctx context.Context, collection string, doc
 	}
 	u.RawQuery = q.Encode()
 
-	// Execute the request
-	body, statusCode, err := c.doRequest(ctx, http.MethodPost, u.String(), docs)
+	body, statusCode, err := c.client.doRequest(ctx, http.MethodPost, u.String(), docs)
 	if err != nil {
 		return "", err
 	}
-
 	if statusCode != http.StatusOK {
-		return "", fmt.Errorf("bulk insert failed with status: %d, body: %s", statusCode, string(body))
+		return "", fmt.Errorf("bulk insert failed: %d, %s", statusCode, string(body))
 	}
-
 	return string(body), nil
 }
 
-// GetDocument fetches a document by ID
-func (c *Client) GetDocument(ctx context.Context, collection, id string) ([]byte, error) {
-	url := fmt.Sprintf("%s/document/%s/%s/%s", c.baseURL, c.client.Twigga.DefaultDatabase, collection, id)
-
-	res, _, err := c.doRequest(ctx, http.MethodGet, url, nil)
-	return res, err
-}
-
-// return list of filetered documents
-func (c *Client) QueryDocuments(
-	ctx context.Context,
-	collection string,
-	filter map[string]any,
-	options ...map[string]string,
-) (*ReadAllDocumentsResult, error) {
-
-	basePath := fmt.Sprintf("%s/document/%s/%s/filter",
-		c.baseURL,
-		c.client.Twigga.DefaultDatabase,
-		collection,
-	)
-
-	u, err := url.Parse(basePath)
+// Exists checks if the collection exists
+func (c *CollectionReference) Exists(ctx context.Context) (bool, error) {
+	url := fmt.Sprintf("%s/collection/%s/%s/exists", c.client.baseURL, c.dbId, c.name)
+	body, _, err := c.client.doRequest(ctx, http.MethodGet, url, nil)
 	if err != nil {
-		return nil, err
+		return false, err
 	}
 
+	var result struct {
+		Exists bool `json:"exists"`
+	}
+	json.Unmarshal(body, &result)
+	return result.Exists, nil
+}
+
+// Filter allows querying the collection
+func (c *CollectionReference) Filter(ctx context.Context, filter map[string]any, options ...map[string]string) (*ReadAllDocumentsResult, error) {
+	basePath := fmt.Sprintf("%s/document/%s/%s/filter", c.client.baseURL, c.dbId, c.name)
+
+	u, _ := url.Parse(basePath)
 	if len(options) > 0 {
 		q := u.Query()
 		for k, v := range options[0] {
@@ -117,161 +115,64 @@ func (c *Client) QueryDocuments(
 		u.RawQuery = q.Encode()
 	}
 
-	body, status, err := c.doRequest(ctx, http.MethodPost, u.String(), filter)
+	body, status, err := c.client.doRequest(ctx, http.MethodPost, u.String(), filter)
 	if err != nil {
 		return nil, err
 	}
-
 	if status == http.StatusTooManyRequests {
-		return nil, errors.New("too many requests per IP, please try again later")
+		return nil, errors.New("too many requests per IP")
 	}
-
 	if status != http.StatusOK {
 		return nil, fmt.Errorf("unexpected status %d: %s", status, string(body))
 	}
 
 	var res ReadAllDocumentsResult
-	if err := json.Unmarshal(body, &res); err != nil {
-		return nil, err
-	}
-
+	json.Unmarshal(body, &res)
 	return &res, nil
 }
 
-func (c *Client) CollectionExists(ctx context.Context, collection string) (bool, error) {
-	url := fmt.Sprintf("%s/collection/%s/%s/exists", c.baseURL, c.client.Twigga.DefaultDatabase, collection)
-
-	body, _, err := c.doRequest(ctx, http.MethodGet, url, nil)
-
-	if err != nil {
-		return false, err
-	}
-
-	var result struct {
-		Exists bool `json:"exists"`
-	}
-	if err := json.Unmarshal(body, &result); err != nil {
-		return false, err
-	}
-
-	return result.Exists, nil
+// DOCUMENT REFERENCE
+type DocumentReference struct {
+	client *httpClient
+	dbId   string
+	coll   string
+	id     string
 }
 
-func (c *Client) DocumentExists(ctx context.Context, collection string, filter map[string]any) (bool, error) {
-	url := fmt.Sprintf("%s/document/%s/%s/exists", c.baseURL, c.client.Twigga.DefaultDatabase, collection)
-
-	body, statusCode, err := c.doRequest(ctx, http.MethodPost, url, filter)
-
-	if err != nil {
-		return false, err
-	}
-
-	var result struct {
-		Exists bool `json:"exists"`
-	}
-
-	if statusCode == http.StatusOK {
-
-		if err := json.Unmarshal(body, &result); err != nil {
-			return false, err
-		}
-
-		return result.Exists, nil
-	}
-
-	if statusCode == 429 { // DNS too many request
-
-		return false, errors.New("too many request per IP, please try again later")
-	}
-
-	return false, nil
-
-}
-
-// GetCollection fetches all documents from a table
-func (c *Client) GetCollection(
-	ctx context.Context,
-	collection string,
-	options ...map[string]string, // optional params
-) (*ReadAllDocumentsResult, error) {
-
-	// Default params
-	params := url.Values{}
-	params.Set("limit", "50")
-	params.Set("sort", "desc")
-	params.Set("field", "id")
-
-	// If options provided, override defaults
-	if len(options) > 0 {
-		for k, v := range options[0] {
-			params.Set(k, v)
-		}
-	}
-
-	base := fmt.Sprintf("%s/document/%s/%s", c.baseURL, c.client.Twigga.DefaultDatabase, collection)
-	fullURL := fmt.Sprintf("%s?%s", base, params.Encode())
-
-	body, status, err := c.doRequest(ctx, http.MethodGet, fullURL, nil)
-	if err != nil {
-		return nil, err
-	}
-
-	if status != http.StatusOK {
-		return nil, fmt.Errorf("unexpected status %d: %s", status, string(body))
-	}
-
-	var res ReadAllDocumentsResult
-	if err := json.Unmarshal(body, &res); err != nil {
-		return nil, err
-	}
-
-	return &res, nil
-}
-
-// UpdateDocument updates a document by ID
-func (c *Client) UpdateDocument(ctx context.Context, collection, id string, doc any) ([]byte, error) {
-	url := fmt.Sprintf("%s/document/%s/%s/%s", c.baseURL, c.client.Twigga.DefaultDatabase, collection, id)
-
-	res, _, err := c.doRequest(ctx, http.MethodPut, url, doc)
+// Get fetches the document
+func (d *DocumentReference) Get(ctx context.Context) ([]byte, error) {
+	url := fmt.Sprintf("%s/document/%s/%s/%s", d.client.baseURL, d.dbId, d.coll, d.id)
+	res, _, err := d.client.doRequest(ctx, http.MethodGet, url, nil)
 	return res, err
 }
 
-// DeleteDocument deletes a document by ID
-func (c *Client) DeleteDocument(ctx context.Context, collection, id string) ([]byte, error) {
-	url := fmt.Sprintf("%s/document/%s/%s/%s", c.baseURL, c.client.Twigga.DefaultDatabase, collection, id)
-
-	res, _, err := c.doRequest(ctx, http.MethodDelete, url, nil)
+// Set creates or overwrites a document with a specific ID
+func (d *DocumentReference) Set(ctx context.Context, data any) ([]byte, error) {
+	url := fmt.Sprintf("%s/document/%s/%s/%s", d.client.baseURL, d.dbId, d.coll, d.id)
+	res, _, err := d.client.doRequest(ctx, http.MethodPost, url, data)
 	return res, err
 }
 
-// CreateDatabase creates a new database
-func (c *Client) CreateDatabase(ctx context.Context) ([]byte, error) {
-	url := fmt.Sprintf("%s/database/%s", c.baseURL, c.client.Twigga.DefaultDatabase)
-
-	res, _, err := c.doRequest(ctx, http.MethodPost, url, nil)
+// Update modifies an existing document
+func (d *DocumentReference) Update(ctx context.Context, data any) ([]byte, error) {
+	url := fmt.Sprintf("%s/document/%s/%s/%s", d.client.baseURL, d.dbId, d.coll, d.id)
+	res, _, err := d.client.doRequest(ctx, http.MethodPut, url, data)
 	return res, err
 }
 
-// DeleteDatabase deletes a database
-func (c *Client) DeleteDatabase(ctx context.Context) ([]byte, error) {
-	url := fmt.Sprintf("%s/database/%s", c.baseURL, c.client.Twigga.DefaultDatabase)
-
-	res, _, err := c.doRequest(ctx, http.MethodDelete, url, nil)
+// Delete removes the document
+func (d *DocumentReference) Delete(ctx context.Context) ([]byte, error) {
+	url := fmt.Sprintf("%s/document/%s/%s/%s", d.client.baseURL, d.dbId, d.coll, d.id)
+	res, _, err := d.client.doRequest(ctx, http.MethodDelete, url, nil)
 	return res, err
 }
 
-// ListAllCollections lists collections in a database
-func (c *Client) ListAllCollections(ctx context.Context) ([]byte, error) {
-	url := fmt.Sprintf("%s/database/%s", c.baseURL, c.client.Twigga.DefaultDatabase)
-
-	res, _, err := c.doRequest(ctx, http.MethodGet, url, nil)
-	return res, err
+func (c *CollectionReference) Listen() (*websocket.Conn, error) {
+	endpoint := fmt.Sprintf("%s/document/%s/%s/changes", c.client.wsBaseURL, c.dbId, c.name)
+	return c.client.openWS(endpoint)
 }
 
-// DeleteCollection deletes a collection in a database
-func (c *Client) DeleteCollection(ctx context.Context, collection string) ([]byte, error) {
-	url := fmt.Sprintf("%s/collection/%s/%s", c.baseURL, c.client.Twigga.DefaultDatabase, collection)
-
-	res, _, err := c.doRequest(ctx, http.MethodDelete, url, nil)
-	return res, err
+func (d *DocumentReference) Listen() (*websocket.Conn, error) {
+	endpoint := fmt.Sprintf("%s/document/%s/%s/%s/changes", d.client.wsBaseURL, d.dbId, d.coll, d.id)
+	return d.client.openWS(endpoint)
 }

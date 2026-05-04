@@ -73,15 +73,6 @@ type ReadAllDocumentsResult struct {
 	NextCursor any              `json:"nextCursor"`
 }
 
-type AuthorizationTuple struct {
-	ID          string `json:"id,omitempty"`
-	ObjectType  string `json:"objectType"`
-	ObjectID    string `json:"objectId"`
-	Relation    string `json:"relation"`
-	SubjectType string `json:"subjectType"` // "user" or "group"
-	SubjectID   string `json:"subjectId"`
-}
-
 type Query struct {
 	Where   []Condition `json:"where"`
 	OrderBy string      `json:"orderBy"` // Field name
