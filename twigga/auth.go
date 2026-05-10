@@ -11,7 +11,7 @@ type CreateUserReq struct {
 	Password  string `json:"password"`
 	FirstName string `json:"firstName"`
 	LastName  string `json:"lastName"`
-	ClientId  string `json:"client_id"`
+	ClientId  string `json:"appId"`
 }
 
 type TokenResponse struct {
@@ -45,12 +45,12 @@ func (a *AuthService) Signup(ctx context.Context, req CreateUserReq) (*TokenResp
 }
 
 // Login authenticates an existing user via Email & Password.
-func (a *AuthService) Login(ctx context.Context, email, password, clientId string) (*TokenResponse, error) {
+func (a *AuthService) Login(ctx context.Context, email, password string) (*TokenResponse, error) {
 	url := fmt.Sprintf("%s/auth/login", a.client.accountURL)
 	req := map[string]string{
-		"email":     email,
-		"password":  password,
-		"client_id": clientId,
+		"email":    email,
+		"password": password,
+		"appId":    a.client.appId,
 	}
 
 	body, status, err := a.client.doRequest(ctx, http.MethodPost, url, req)
@@ -71,7 +71,7 @@ func (a *AuthService) LoginWithProvider(ctx context.Context, providerName, crede
 	url := fmt.Sprintf("%s/auth/provider/%s", a.client.accountURL, providerName)
 	req := map[string]string{
 		"credential": credential,
-		"client_id":  clientId,
+		"appId":      clientId,
 	}
 
 	body, status, err := a.client.doRequest(ctx, http.MethodPost, url, req)

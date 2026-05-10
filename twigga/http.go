@@ -97,6 +97,9 @@ func (c *httpClient) ensureToken(ctx context.Context) error {
 		return nil // No credentials provided, operating unauthenticated
 	}
 
+	fmt.Println("appId: ", c.appId)
+	fmt.Println("appSecret: ", c.appSecret)
+
 	c.tokenMutex.RLock()
 	if c.token != "" && time.Now().Add(5*time.Minute).Before(c.expiresAt) {
 		c.tokenMutex.RUnlock()
@@ -113,9 +116,9 @@ func (c *httpClient) ensureToken(ctx context.Context) error {
 
 	url := fmt.Sprintf("%s/oauth/token", c.accountURL)
 	reqBody := map[string]string{
-		"grant_type":    "client_credentials",
-		"client_id":     c.appId,
-		"client_secret": c.appSecret,
+		"grant_type": "client_credentials",
+		"appId":      c.appId,
+		"appSecret":  c.appSecret,
 	}
 	bodyBytes, _ := json.Marshal(reqBody)
 
