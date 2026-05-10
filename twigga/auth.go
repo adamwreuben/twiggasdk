@@ -126,7 +126,7 @@ func (a *AuthService) ForgotPassword(ctx context.Context, email string) error {
 
 // ResetPassword takes the token from the email and applies the new password.
 func (a *AuthService) ResetPassword(ctx context.Context, resetToken, newPassword string) error {
-	url := fmt.Sprintf("%s/auth/v1/reset-password", a.client.accountURL)
+	url := fmt.Sprintf("%s/auth/reset-password", a.client.accountURL)
 	req := map[string]string{
 		"token":        resetToken,
 		"new_password": newPassword,

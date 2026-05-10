@@ -87,19 +87,32 @@ func (c *CollectionReference) BulkAdd(ctx context.Context, docs []any, groupFiel
 	return string(body), nil
 }
 
-// Exists checks if the collection exists
-func (c *CollectionReference) Exists(ctx context.Context) (bool, error) {
-	url := fmt.Sprintf("%s/collection/%s/%s/exists", c.client.baseURL, c.dbId, c.name)
-	body, _, err := c.client.doRequest(ctx, http.MethodGet, url, nil)
+func (c *CollectionReference) Exists(ctx context.Context, filter map[string]any) (bool, error) {
+
+	if filter == nil || len(filter) == 0 {
+		url := fmt.Sprintf("%s/collection/%s/%s/exists", c.client.baseURL, c.dbId, c.name)
+		body, _, err := c.client.doRequest(ctx, http.MethodGet, url, nil)
+		if err != nil {
+			return false, err
+		}
+
+		var result struct {
+			Exists bool `json:"exists"`
+		}
+		json.Unmarshal(body, &result)
+		return result.Exists, nil
+	}
+
+	options := map[string]string{
+		"limit": "1",
+	}
+
+	res, err := c.Filter(ctx, filter, options)
 	if err != nil {
 		return false, err
 	}
 
-	var result struct {
-		Exists bool `json:"exists"`
-	}
-	json.Unmarshal(body, &result)
-	return result.Exists, nil
+	return len(res.Documents) > 0, nil
 }
 
 // Filter allows querying the collection
