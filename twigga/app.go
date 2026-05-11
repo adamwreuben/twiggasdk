@@ -103,6 +103,11 @@ func InitializeApp(ctx context.Context, opts ...ClientOption) (*App, error) {
 func (a *App) Auth() *AuthService {
 	return &AuthService{client: a.baseClient, projectID: a.projectID}
 }
+
+func (a *App) GetToken() string {
+	return a.baseClient.GetToken()
+}
+
 func (a *App) Functions() *FunctionsService {
 	return &FunctionsService{client: a.baseClient, projectID: a.projectID}
 }

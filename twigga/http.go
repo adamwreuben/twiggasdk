@@ -13,7 +13,6 @@ import (
 	"github.com/gorilla/websocket"
 )
 
-// doRequest handles standard JSON REST calls
 func (c *httpClient) doRequest(ctx context.Context, method, url string, body any) ([]byte, int, error) {
 	// ensure we have a valid token before proceeding!
 	if err := c.ensureToken(ctx); err != nil {
@@ -36,7 +35,7 @@ func (c *httpClient) doRequest(ctx context.Context, method, url string, body any
 
 	req.Header.Set("Content-Type", "application/json")
 	if c.token != "" {
-		req.Header.Set("BONGO-TOKEN", c.token) // Updated to use the new struct property
+		req.Header.Set("BONGO-TOKEN", c.token)
 	}
 
 	resp, err := c.http.Do(req)
@@ -53,7 +52,7 @@ func (c *httpClient) doRequest(ctx context.Context, method, url string, body any
 	return bodyBytes, resp.StatusCode, nil
 }
 
-// doMultipartRequest handles file uploads (like zip files for Functions)
+// doMultipartRequest handles file uploads (including zip files for Functions)
 func (c *httpClient) doMultipartRequest(ctx context.Context, method, url string, body io.Reader, contentType string) ([]byte, int, error) {
 	req, err := http.NewRequestWithContext(ctx, method, url, body)
 	if err != nil {
@@ -90,15 +89,15 @@ func (c *httpClient) openWS(rawurl string) (*websocket.Conn, error) {
 	return conn, err
 }
 
-// ensureToken checks if the SDK's internal token is missing or expired.
-// If it is, it silently calls BongoCloud to get a new one before continuing.
+func (c *httpClient) GetToken() string {
+	return c.token
+}
+
+// it silently calls BongoCloud to get a new token before continuing.
 func (c *httpClient) ensureToken(ctx context.Context) error {
 	if c.appId == "" || c.appSecret == "" {
 		return nil // No credentials provided, operating unauthenticated
 	}
-
-	fmt.Println("appId: ", c.appId)
-	fmt.Println("appSecret: ", c.appSecret)
 
 	c.tokenMutex.RLock()
 	if c.token != "" && time.Now().Add(5*time.Minute).Before(c.expiresAt) {

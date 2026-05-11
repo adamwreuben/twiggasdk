@@ -66,6 +66,34 @@ func (a *AuthService) Login(ctx context.Context, email, password string) (*Token
 	return &res, nil
 }
 
+func (a *AuthService) GenerateLoginURL(ctx context.Context, redirectUri string) (string, error) {
+	url := fmt.Sprintf("%s/auth/authenticate", a.client.accountURL)
+
+	req := map[string]string{
+		"appId":       a.client.appId,
+		"appSecret":   a.client.appSecret,
+		"redirectUri": redirectUri,
+	}
+
+	body, status, err := a.client.doRequest(ctx, http.MethodPost, url, req)
+	if err != nil {
+		return "", err
+	}
+
+	// Expecting 201 Created from your AuthenticateApp handler
+	if status != http.StatusCreated && status != http.StatusOK {
+		return "", fmt.Errorf("failed to generate login url with status %d: %s", status, string(body))
+	}
+
+	// Parse the resulting Auth URL
+	var res struct {
+		AuthURL string `json:"authUrl"`
+	}
+	Unmarshal(body, &res)
+
+	return res.AuthURL, nil
+}
+
 // LoginWithProvider handles Identity (e.g., passing a Google Token).
 func (a *AuthService) LoginWithProvider(ctx context.Context, providerName, credential, clientId string) (*TokenResponse, error) {
 	url := fmt.Sprintf("%s/auth/provider/%s", a.client.accountURL, providerName)
