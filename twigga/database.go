@@ -77,6 +77,35 @@ func (d *DocumentReference) Get(ctx context.Context) ([]byte, error) {
 	return res, err
 }
 
+func (d *DocumentReference) Exists(ctx context.Context) (bool, error) {
+	url := fmt.Sprintf("%s/document/%s/%s/exists", d.client.baseURL, d.dbId, d.coll)
+
+	filter := map[string]any{"id": d.id}
+
+	body, status, err := d.client.doRequest(ctx, http.MethodPost, url, filter)
+	if err != nil {
+		return false, fmt.Errorf("failed to check document existence: %w", err)
+	}
+
+	if status == http.StatusNotFound {
+		return false, nil
+	}
+
+	if status != http.StatusOK {
+		return false, fmt.Errorf("unexpected status %d: %s", status, string(body))
+	}
+
+	var result struct {
+		Exists bool `json:"exists"`
+	}
+
+	if err := json.Unmarshal(body, &result); err != nil {
+		return false, fmt.Errorf("failed to parse exists response: %v", err)
+	}
+
+	return result.Exists, nil
+}
+
 func (d *DocumentReference) Set(ctx context.Context, data any) ([]byte, error) {
 	url := fmt.Sprintf("%s/document/%s/%s/%s", d.client.baseURL, d.dbId, d.coll, d.id)
 	res, _, err := d.client.doRequest(ctx, http.MethodPost, url, data)
@@ -134,32 +163,27 @@ func (c *CollectionReference) BulkAdd(ctx context.Context, docs []any, groupFiel
 	return string(body), nil
 }
 
-func (c *CollectionReference) Exists(ctx context.Context, filter map[string]any) (bool, error) {
+func (c *CollectionReference) CollectionExists(ctx context.Context) (bool, error) {
+	url := fmt.Sprintf("%s/collection/%s/%s/exists", c.client.baseURL, c.dbId, c.name)
 
-	if filter == nil || len(filter) == 0 {
-		url := fmt.Sprintf("%s/collection/%s/%s/exists", c.client.baseURL, c.dbId, c.name)
-		body, _, err := c.client.doRequest(ctx, http.MethodGet, url, nil)
-		if err != nil {
-			return false, err
-		}
-
-		var result struct {
-			Exists bool `json:"exists"`
-		}
-		json.Unmarshal(body, &result)
-		return result.Exists, nil
-	}
-
-	options := map[string]string{
-		"limit": "1",
-	}
-
-	res, err := c.Filter(ctx, filter, options)
+	body, status, err := c.client.doRequest(ctx, http.MethodGet, url, nil)
 	if err != nil {
-		return false, err
+		return false, fmt.Errorf("failed to check collection existence: %w", err)
 	}
 
-	return len(res.Documents) > 0, nil
+	if status != http.StatusOK {
+		return false, fmt.Errorf("unexpected status %d: %s", status, string(body))
+	}
+
+	var result struct {
+		Exists bool `json:"exists"`
+	}
+
+	if err := json.Unmarshal(body, &result); err != nil {
+		return false, fmt.Errorf("failed to parse exists response: %v", err)
+	}
+
+	return result.Exists, nil
 }
 
 func (c *CollectionReference) Filter(ctx context.Context, filter map[string]any, options ...map[string]string) (*ReadAllDocumentsResult, error) {
