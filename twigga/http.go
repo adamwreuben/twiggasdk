@@ -54,6 +54,11 @@ func (c *httpClient) doRequest(ctx context.Context, method, url string, body any
 
 // doMultipartRequest handles file uploads (including zip files for Functions)
 func (c *httpClient) doMultipartRequest(ctx context.Context, method, url string, body io.Reader, contentType string) ([]byte, int, error) {
+	// ensure we have a valid token before proceeding
+	if err := c.ensureToken(ctx); err != nil {
+		return nil, 0, fmt.Errorf("SDK authentication error: %v", err)
+	}
+
 	req, err := http.NewRequestWithContext(ctx, method, url, body)
 	if err != nil {
 		return nil, 0, err
